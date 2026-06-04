@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+	<menu id ="main-menu">
+		<submenu>
+			<attribute name="label" translatable="yes">Texts</attribute>
+			<section>
+				<item>
+					<attribute name="label">RefreshList</attribute>
+				</item>
+			</section>
+		</submenu>
+
+		<submenu>
+			<attribute name="label" translatable="yes">Options</attribute>
+			<section>
+				<item>
+					<attribute name="label" translatable="yes">Test Label</attribute>
+				</item>
+			</section>
+		</submenu>
+	</menu>
+</interface>
