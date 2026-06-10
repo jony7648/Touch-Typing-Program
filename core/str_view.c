@@ -1,10 +1,11 @@
 #include "str_view.h"
 #include "arena.h"
+#include "math.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-void str_view_init(StrView *p, char *c_str) {
+void str_view_init(StrView *p, const char *c_str) {
 	p->len = 0;
 	p->ptr = c_str;
 
@@ -20,6 +21,40 @@ void str_view_init(StrView *p, char *c_str) {
 void str_view_slice(StrView *str, size_t start, size_t end) {
 	str->ptr += start;
 	str->len = end - start;	
+}
+
+size_t str_view_split(StrView *str, Arena *arena, char split_char, bool remove_empty) {
+	size_t str_count = 0;
+	size_t str_start = 0;
+	size_t str_end = 0;
+
+	for (size_t i=0; i<str->len; i++) {
+		char curr_char = str->ptr[i];		
+		bool should_split = curr_char == split_char || i == str->len - 1;
+
+		if (should_split) {
+			size_t view_len = i - str_start;
+
+			if (remove_empty && view_len == 0) {
+				continue;
+			}
+
+			StrView *view = arena_push(arena, sizeof(StrView));	
+
+			if (!view) {
+				return 0;
+			}
+
+			view->ptr = str->ptr+str_start;
+			view->len = view_len;
+			str_count++;
+			str_start = i+1;
+			continue;
+		}
+	}
+
+
+	return str_count;
 }
 
 void str_view_display(StrView *str) {
@@ -89,7 +124,7 @@ void str_view_get_extension(StrView *p) {
 	}
 }
 
-int str_view_cmp(StrView *view, char *c_str) {
+int str_view_cmp(StrView *view, const char *c_str) {
 	if (strlen(c_str) > view->len) {
 		return -1;
 	}
@@ -151,4 +186,79 @@ GCError str_view_to_buffer(StrView *p, char *buff, size_t buff_size) {
 	buff[p->len] = '\0';
 
 	return ErrorClear;
+}
+
+int str_view_to_int(StrView *view) {
+	int ret_int = 0;
+	int multiplier = 1;
+
+	int start_offset = 0;
+
+	const char *str_ptr = view->ptr;
+
+	if (str_ptr[0] == '-') {
+		multiplier = -1;	
+		start_offset = 1;
+	}
+
+	
+	int loop_start = view->len-1;
+	for (int i=loop_start; i>=start_offset; i--) {
+		char curr_char = view->ptr[i];
+
+		if (curr_char >= '0' && curr_char <= '9') {
+			ret_int += (curr_char - '0') * pow(10, loop_start - i);	
+		}
+
+		else {
+			return 0;
+		}
+	}
+
+	return ret_int;
+}
+
+
+void str_view_iterator_init(StrViewIterator *it, const StrView *src_view) {
+	it->pos = 0;
+	it->src_view = src_view;
+}
+
+bool str_view_iterator_has_next(StrViewIterator *it) {
+	int i=it->pos;
+	int start = 0;
+
+	if (i >= it->src_view->len) {
+		return false;
+	}
+
+	//use a while loop here to make sure that i incremets even if the condition
+	//fails
+	while (it->src_view->ptr[i] == ' ') {
+	// if we find a null terminator then there is no more words
+		if (it->src_view->ptr[i] == '\0') {
+			return false;
+		}
+
+		i++;
+	}
+
+
+	start = i;
+	it->view.ptr = &it->src_view->ptr[start];
+
+
+	for (i=i+1; it->src_view->ptr[i] != ' '; i++) {
+	// if we find a null terminator then stop searching for spaces
+		if (it->src_view->ptr[i] == '\0') {
+			break;
+		}
+	}
+
+
+	it->view.len = i - start;
+	it->pos = i+1;
+
+
+	return true;
 }

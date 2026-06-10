@@ -6,6 +6,8 @@ void arena_init(Arena* arena, void* p_mem, size_t size) {
 		printf("Arena is NULL!");
 	}
 
+
+
 	arena->p_mem = p_mem;
 	arena->size = size;
 	arena->pos = 0;

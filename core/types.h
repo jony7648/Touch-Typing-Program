@@ -13,4 +13,9 @@ typedef struct {
 	char data[5];
 } IChar;
 
+typedef struct {
+	size_t value;
+	bool valid;
+} GCSizeTOptional;
+
 void ichar_display(IChar ichar);

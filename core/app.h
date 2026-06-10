@@ -30,4 +30,4 @@ void gc_app_init(GCApp *p_app, int argc, char **argv);
 void gc_app_create_wins(GCApp *p, unsigned int win_count);
 void gc_app_run(GCApp *p_app, void(*activate_func)(GtkApplication*, gpointer), void* p_signal);
 GCError gc_app_attach_scenes(GCApp *p, GCScene **scene_arr, int scene_count);
-GCError gc_app_display_scene(GCApp *p, int scene_index);
+GCError gc_app_display_scene(int win_id, int scene_id);

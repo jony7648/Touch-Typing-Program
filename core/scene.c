@@ -39,9 +39,12 @@ GCScene *gc_scene_create(unsigned short scene_id, Point dimensions) {
 
 
 
-	gtk_grid_set_column_homogeneous(GTK_GRID(p_scene->scene_container.gc_widget.g_widget), true);
-	gtk_grid_set_row_homogeneous(GTK_GRID(p_scene->scene_container.gc_widget.g_widget), true);
+	//gtk_grid_set_column_homogeneous(GTK_GRID(p_scene->scene_container.gc_widget.g_widget), true);
+	//gtk_grid_set_row_homogeneous(GTK_GRID(p_scene->scene_container.gc_widget.g_widget), true);
 
+	//increase the refrence of this scene container so when we detach it from
+	//a window it does not get freed automaticly by the garbage collecter
+	g_object_ref(p_scene->scene_container.gc_widget.g_widget);
 
 	
 	return p_scene;

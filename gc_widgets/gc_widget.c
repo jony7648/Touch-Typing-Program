@@ -24,7 +24,10 @@ void gc_widget_init(GCWidget* widget, GtkWidget* gtk_widget, void *(*destructor_
 }
 
 GCError gc_widget_free(GCWidget *p) {
-	void *heap_mem = NULL;
+	//This function is responsible for freeing the GCWidget
+	//This will also free if the widget if it does not have a destructor
+	//in case if a type is not used frequently
+	void *heap_mem = p;
 
 	if (!p) {
 		return ErrorNull;
@@ -33,6 +36,7 @@ GCError gc_widget_free(GCWidget *p) {
 	if (p->destructor_ptr) {
 		heap_mem = p->destructor_ptr(p);
 	}
+	
 
 	//do gc free stuff
 
@@ -44,7 +48,7 @@ GCError gc_widget_free(GCWidget *p) {
 
 
 	if (p->listener) {
-		listener_free(p->listener);
+		listener_close(p->listener);
 		free(p->listener);
 		p->listener = NULL;
 	}

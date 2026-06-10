@@ -36,11 +36,13 @@ set(CORE_C
 	"${CORE_DIR}/str_view.c"
 	"${CORE_DIR}/arena.c" 
 	"${CORE_DIR}/slice.c"
+	"${CORE_DIR}/time_componet.c"
 	"${CORE_DIR}/keyboard.c" 
 	"${CORE_DIR}/listener.c"
 	"${CORE_DIR}/app.c" 
 	"${CORE_DIR}/window.c"
 	"${CORE_DIR}/scene.c"
+	"${CORE_DIR}/global_manager.c"
 )
 
 set (GC

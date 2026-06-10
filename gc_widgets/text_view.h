@@ -14,3 +14,4 @@ typedef struct {
 } GCTextView;
 
 GCTextView *gc_text_view_create(GCTextViewDef def);
+void gc_text_view_set_text(GCTextView *text_view, char *text);

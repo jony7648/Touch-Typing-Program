@@ -3,9 +3,9 @@
 #include "slice.h"
 #include "space.h"
 
-
-
 #include <gtk/gtk.h>
+
+GCApp *G_app = NULL;
 
 void gc_app_init(GCApp *p_app, int argc, char **argv) {
 	p_app->g_component = gtk_application_new(p_app->app_id, G_APPLICATION_DEFAULT_FLAGS);
@@ -29,6 +29,7 @@ void gc_app_create_wins(GCApp *p, unsigned int win_count) {
 }
 
 void gc_app_run(GCApp *p_app, void(*activate_func)(GtkApplication*, gpointer), void* activate_signal) {
+	G_app = p_app;
 	g_signal_connect(p_app->g_component, "activate", G_CALLBACK(activate_func), activate_signal);
 
 	p_app->status = g_application_run(G_APPLICATION(p_app->g_component), p_app->argc, p_app->argv);
@@ -59,16 +60,65 @@ GCError gc_app_attach_scenes(GCApp *p, GCScene **scene_arr, int scene_count) {
 	return ErrorClear;
 }
 
-
-GCError gc_app_display_scene(GCApp *p, int scene_id) {
+GCScene *get_scene_by_id(GCApp *p, int scene_id) {
 	GCScene *scene = NULL;
 
 	for (int i=0; i<p->scene_arr.size; i++) {
 		if (p->scene_arr.p_mem[i]->scene_id == scene_id) {
-			scene = p->scene_arr.p_mem[i];
+			scene = p->scene_arr.p_mem[i];	
 		}
 	}
 
+	return scene;
+}
+
+GCWin *get_win_by_id(GCApp *p, int win_id) {
+	GCWin *gc_win = NULL;
+
+	if (win_id < 0 || win_id >= p->win_arr.size) {
+		return NULL;
+	}
+
+	gc_win = p->win_arr.p_mem[win_id];
+	
+	return gc_win;
+}
+
+
+GCError gc_app_display_scene(int win_id, int scene_id) {
+	if (!G_app) {
+		return ErrorNull;
+	}
+
+	GCWin *win = get_win_by_id(G_app, win_id);	
+	GCScene *scene = NULL;
+
+	if (!win) {
+		return ErrorNull;
+	}
+
+	scene = get_scene_by_id(G_app, scene_id);
+
+
+
+	if (!scene) {
+		return ErrorNull;
+	}
+
+
+
+	gc_win_set_scene(win, scene);
+	gc_container_display(&scene->scene_container);
+
+	return ErrorClear;
+}
+
+/*
+GCError gc_app_display_scene(GCApp *p, int scene_id) {
+	GCScene *scene = NULL;
+
+	scene = get_scene_by_id(p, scene_id);
+	
 	if (scene == NULL) {
 		return ErrorSceneIndexNotFound;
 	}
@@ -112,6 +162,24 @@ GCError gc_app_display_scene(GCApp *p, int scene_id) {
 	gtk_window_set_default_size(GTK_WINDOW(scene_win->g_widget), scene->dimensions.x, scene->dimensions.y);
 	gtk_window_present(GTK_WINDOW(scene_win->g_widget));
 
+
 	return ErrorClear;
-	 
+}
+*/
+GCError gc_app_switch_scenes(GCApp *app, GCWin *win, int scene_id) {
+	if (!G_app) {
+		return ErrorNull;
+	}
+
+	GCScene *scene = get_scene_by_id(app, scene_id);
+
+	if (!scene) {
+		return ErrorSceneIndexNotFound;
+	}
+
+	//make it so if aleready presenting cancel
+	
+
+	return ErrorClear;
+	
 }

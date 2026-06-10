@@ -9,7 +9,6 @@ void *gc_text_view_free(GCWidget *gc_widget) {
 
 GCTextView *gc_text_view_create(GCTextViewDef def) {
 	GCTextView *p = malloc(sizeof(GCTextView));
-	GtkTextBuffer *text_buffer = NULL;
 
 
 	if (!p) {
@@ -25,8 +24,6 @@ GCTextView *gc_text_view_create(GCTextViewDef def) {
 
 	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(g_widget), def.wrap_mode);
 
-	text_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(g_widget));;
-	gtk_text_buffer_set_text(text_buffer, def.init_text, -1);
 
 	gc_widget_init(
 		&p->gc_widget,
@@ -39,5 +36,12 @@ GCTextView *gc_text_view_create(GCTextViewDef def) {
 
 	gtk_text_view_set_editable(GTK_TEXT_VIEW(g_widget), def.editable);
 
+	gc_text_view_set_text(p, def.init_text);
+
 	return p;
+}
+
+void gc_text_view_set_text(GCTextView *text_view, char *text) {
+	GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_view->gc_widget.g_widget));	
+	gtk_text_buffer_set_text(text_buffer, text, -1);
 }

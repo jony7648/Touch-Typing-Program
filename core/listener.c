@@ -4,6 +4,8 @@ const int STARTING_EMIT_FUCNTIONS_SIZE = 5;
 const int STARTING_GEMIT_HOLDER_SIZE = 5;
 
 
+
+
 static void handle_g_message(GtkApplication *g_app, gpointer p_signal) {
 	GEmitData *p_emit_data = (GEmitData*)p_signal;
 
@@ -45,7 +47,7 @@ GEmitData *g_emit_data_request(GEmitDataHolder *p) {
 	return ret_ptr;
 }
 
-void listener_init(Listener *p, void *parent_obj, GCType type, int signal_count) {
+GCError listener_init(Listener *p, void *parent_obj, GCType type, int signal_count) {
 	p->parent_obj = parent_obj;
 	p->parent_type = type;
 	p->_signal_count = signal_count;
@@ -54,15 +56,90 @@ void listener_init(Listener *p, void *parent_obj, GCType type, int signal_count)
 	p->_emit_data_holder.count = 0;
 	p->_emit_data_holder.emit_data_arr = NULL;
 
-	p->_emit_func_arr = malloc(signal_count * sizeof(GCEmitFunctions));
 
 
-	for (int i=0; i<p->_signal_count; i++) {
-		GCEmitFunctions *func_arr = &p->_emit_func_arr[i];
-		func_arr->count = STARTING_EMIT_FUCNTIONS_SIZE;
-		func_arr->func_arr = malloc(func_arr->count * sizeof(VoidFuncPtr));
+	if (signal_count < 1) {
+		return ErrorClear;
 	}
-	
+	 
+	p->_emit_func_arr = malloc(signal_count * sizeof(GCEmitFuncList));
+
+	if (!p->_emit_func_arr) {
+		return ErrorFailedAlloc;
+	}
+
+	for (int i=0; i<signal_count; i++) {
+		GCEmitFuncList *func_arr = &p->_emit_func_arr[i];
+
+		func_arr->size = STARTING_EMIT_FUCNTIONS_SIZE;
+		func_arr->count = 0;
+		func_arr->id = i;
+		func_arr->p_mem = malloc(sizeof(GCEmitFuncPtr) * p->_emit_func_arr[i].size);
+	}
+
+	return ErrorClear;
+}
+
+void gc_emit_functions_append(GCEmitFuncList *func_arr, GCEmitFuncPtr func) {
+	size_t new_count = func_arr->count + 1;
+
+	if (new_count > func_arr->size) {
+		func_arr->size *= 2;	
+
+		void *new_mem = realloc(func_arr->p_mem, func_arr->size);
+
+		if (!new_mem) {
+			return;
+		}
+
+		func_arr->p_mem = new_mem;
+	}
+
+	func_arr->p_mem[func_arr->count] = func;
+	func_arr->count = new_count;
+}
+
+
+void listener_listen(Listener *sending_listener, int signal_id, GCEmitFuncPtr func_ptr) {
+	if (sending_listener->_signal_count <= signal_id) {
+		printf(
+			"You only have %d signals in the listener at address %p. You cannot listen for the signal of id %d!\n",
+			sending_listener->_signal_count, sending_listener, signal_id
+		);
+		return;
+	}
+
+	gc_emit_functions_append(&sending_listener->_emit_func_arr[signal_id], func_ptr);
+}
+
+
+
+void listener_emit(Listener *listener, int id, void *signal_data) {
+	if (listener->_signal_count <= id) {
+		printf(
+			"You only have %d signals in in the listener at address %p. You cannot emit the signal of id %d!\n",
+			listener->_signal_count, listener, id
+		);
+		return;
+	}
+
+	GCEmitData emit_data = {
+		.type = listener->parent_type,
+		.holder = listener->parent_obj,
+		.sig_data = signal_data,
+	};
+
+
+	GCEmitFuncList *func_arr = &listener->_emit_func_arr[id];
+
+
+	for (int i=0; i<func_arr->count; i++) {
+		GCEmitFuncPtr func = func_arr->p_mem[i];
+
+		if (func) {
+			func(&emit_data);
+		}
+	}
 }
 
 
@@ -90,18 +167,19 @@ void listener_glisten(Listener *listener, GtkWidget *g_widget, char *signal_acti
 	);
 }
 
-void gc_emit_functions_free(GCEmitFunctions *func_multi_arr) {
-
+void gc_emit_func_list_free(GCEmitFuncList *func_arr) {
+	free(func_arr->p_mem);
 }
 
 void g_emit_data_holder_free(GEmitDataHolder *holder) {
-
+	free(holder->emit_data_arr);	
 }
 
-void listener_free(Listener *p) {
-	gc_emit_functions_free(p->_emit_func_arr);	
-	g_emit_data_holder_free(&p->_emit_data_holder);
+void listener_close(Listener *p) {
+	for (int i=0; i<p->_signal_count; i++) {
+		gc_emit_func_list_free(&p->_emit_func_arr[i]);	
+	}
 
-	p->_emit_func_arr = NULL;
+	g_emit_data_holder_free(&p->_emit_data_holder);
 }
 

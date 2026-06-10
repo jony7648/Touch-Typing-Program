@@ -3,7 +3,9 @@
 	<menu id ="main-menu">
 		<submenu>
 			<attribute name="label" translatable="yes">Texts</attribute>
-			<section>
+			
+			<section id="typing_texts_section">
+
 				<item>
 					<attribute name="label">RefreshList</attribute>
 				</item>

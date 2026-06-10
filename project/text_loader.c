@@ -1,12 +1,21 @@
 #include "text_loader.h"
 #include "strings.h"
+#include "core/listener.h"
 #define TEXT_BUFF_SIZE 10000
 char G_type_test_buffer[TEXT_BUFF_SIZE];
 char *G_type_test_use_ptr = G_type_test_buffer;
 size_t G_text_buffer_pos = 0;
 
 
+Listener G_listener;
+
+
 const char ADVANCE_CHAR = ' ';
+
+
+void text_loader_init(GCApp*) {
+	listener_init(&G_listener, NULL, GCTypeEmpty, TextLoaderSignalCount);	
+}
 
 size_t buffer_append(char *store_buff, char *copy_buff, size_t buffer_start) {
 	size_t i = 0;
@@ -43,6 +52,7 @@ const char *text_loader_load_text(char *file_path) {
 
 	char *ret_ptr = G_type_test_buffer;
 
+	printf("%s\n", file_path);
 	if (!fptr) {
 		fclose(fptr);
 		return NULL;		
@@ -61,7 +71,7 @@ const char *text_loader_load_text(char *file_path) {
 	}
 
 
-	//get rid of UTF8 char
+	//get rid of UTF8 header
 	if (strncmp(G_type_test_buffer, "\xEF\xBB\xBF", 3) == 0) {
 		ret_ptr += 3;
 	}
@@ -71,8 +81,25 @@ const char *text_loader_load_text(char *file_path) {
 	fclose(fptr);
 	fptr = NULL;
 
+	TextLoaderSigTextLoaded signal = {
+		.text = ret_ptr,
+	};
+
+	listener_emit(&G_listener, TextLoaderSigIDTextLoaded, &signal);
+
 	return ret_ptr;
 }
+
+void text_loader_restart_text() {
+	G_text_buffer_pos = 0;	
+
+	TextLoaderSigTextReloaded signal = {
+		.text = G_type_test_use_ptr,	
+	};
+
+	listener_emit(&G_listener, TextLoaderSigIDTextReloaded, &signal);	
+}
+
 
 
 bool text_loader_check_for_matching_word(const char *word) {
@@ -81,6 +108,7 @@ bool text_loader_check_for_matching_word(const char *word) {
 	for (size_t i = 0; i<word_len; i++) {
 		size_t challenge_pos = i+G_text_buffer_pos;
 		char challenge_char = G_type_test_use_ptr[challenge_pos];
+		char user_char = word[i];
 
 
 		//printf("pos: %c %c\n", word[i], challenge_char);
@@ -88,16 +116,17 @@ bool text_loader_check_for_matching_word(const char *word) {
 		//
 
 
-		if (challenge_char == ADVANCE_CHAR) {
+		bool should_end_text = (challenge_char == ADVANCE_CHAR || challenge_char == '\0') && word[i] == ADVANCE_CHAR;
+
+		if (should_end_text) {
 			return true;
 		}
 
-		if (word[i] != challenge_char) {
+		if (user_char != challenge_char) {
 			return false;
 		}
 	}
 
-	puts("");
 
 	return false;
 }
@@ -105,11 +134,42 @@ bool text_loader_check_for_matching_word(const char *word) {
 char *text_loader_advance_word() {
 	size_t i = 0;
 
-	for (i=G_text_buffer_pos; G_type_test_use_ptr[i] != ' '; i++);
-	for (i; G_type_test_use_ptr[i] == ' '; i++);
+	if (G_type_test_use_ptr[0] == '\0') {
+		printf("No text is loaded!");
+		return NULL;
+	}
+
+
+	//if the end of the text was found do not look for the next word
+	//and jump to the end of the function
+	for (i=G_text_buffer_pos; G_type_test_use_ptr[i] != ' '; i++) {
+		if (G_type_test_use_ptr[i] == '\0') {
+			puts("You finished the text!!");
+			text_loader_restart_text();
+			return G_type_test_use_ptr;
+		}
+	}
+
+
+	//Keep checking for the end of the text just in case the writer inserted
+	//extra spaces at the end
+	for (i=i; G_type_test_use_ptr[i] == ' '; i++) {
+		if (G_type_test_use_ptr[i] == '\0') {
+			puts("You finished the text!!");
+			break;
+		}
+	}
+
+end_func:
+
 
 
 	G_text_buffer_pos = i;
 
 	return &G_type_test_use_ptr[i];
+}
+
+
+void text_loader_listen_for(int id, GCEmitFuncPtr func) {
+	listener_listen(&G_listener, id, func);
 }

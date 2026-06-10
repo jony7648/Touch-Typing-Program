@@ -7,7 +7,25 @@
 GCTextView *G_ChallengeTextView = NULL;
 
 
-static gboolean reset_text_field_text(gpointer ptr) {
+static void _on_text_loader_text_loaded(GCEmitData *emit_data) {
+	TextLoaderSigTextLoaded *signal = emit_data->sig_data;
+
+
+	if (G_ChallengeTextView) {
+		gc_text_view_set_text(G_ChallengeTextView, signal->text);
+	}
+}
+
+static void _on_text_loader_text_reloaded(GCEmitData *emit_data) {
+	TextLoaderSigTextReloaded *signal = emit_data->sig_data;
+
+	//do not need to reset text buffer with this as it is being reset
+	//with the by the input field
+
+
+}
+
+static gboolean action_reset_text_field_text(gpointer ptr) {
 	GCTextField *text_field = (GCTextField*)ptr;
 
 	gtk_editable_set_text(GTK_EDITABLE(text_field->gc_widget.g_widget), "");
@@ -26,7 +44,7 @@ static void _on_textfield_activate(GEmitData *emit_data) {
 
 	if (str_view_ends_with(&view, ' ')) {
 		if (text_loader_check_for_matching_word(text)) {
-			g_idle_add(reset_text_field_text, text_field);
+			g_idle_add(action_reset_text_field_text, text_field);
 			GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(G_ChallengeTextView->gc_widget.g_widget));
 
 			char *new_ptr = text_loader_advance_word();
@@ -127,7 +145,7 @@ static GCTextField *create_text_field(Rect rect) {
 	return text_field;
 }
 
-GCTextView *create_challenge_text_view(Rect rect, const char* text) {
+GCTextView *create_challenge_text_view(Rect rect) {
 	GCTextView *text_view = gc_text_view_create((GCTextViewDef) {
 		.common = {
 			.halign = GTK_ALIGN_CENTER,
@@ -141,7 +159,7 @@ GCTextView *create_challenge_text_view(Rect rect, const char* text) {
 			.rect = rect,
 		},
 
-		.init_text = text,
+		.init_text = "",
 		.editable = false,
 		.wrap_mode = GTK_WRAP_NONE,
 	});		
@@ -158,7 +176,9 @@ GCTextView *create_challenge_text_view(Rect rect, const char* text) {
 }
 
 static GCScrollWindow *create_challenge_scroll_window(Rect rect, Point win_dimensions) {
-	const char *challenge_text = text_loader_load_text("project_data/texts/bob text 1.txt");
+	text_loader_listen_for(TextLoaderSigIDTextLoaded, _on_text_loader_text_loaded);
+	text_loader_listen_for(TextLoaderSigIDTextReloaded, _on_text_loader_text_reloaded);
+
 
 	GCScrollWindow *challenge_scroll_window = NULL;
 
@@ -184,7 +204,7 @@ static GCScrollWindow *create_challenge_scroll_window(Rect rect, Point win_dimen
 
 	gtk_widget_set_size_request(challenge_scroll_window->gc_widget.g_widget, win_dimensions.x, win_dimensions.y);
 
-	G_ChallengeTextView = create_challenge_text_view((Rect){0,-1,1,1}, challenge_text);
+	G_ChallengeTextView = create_challenge_text_view((Rect){0,-1,1,1});
 	GCWidgetSliceAppend(&challenge_scroll_window->children_slice, &G_ChallengeTextView->gc_widget);
 
 
@@ -242,6 +262,109 @@ static GCContainer *create_keyboard_section_container(KeyboardLayout *layout) {
 	return container;
 }
 
+
+GMenu *create_side_menu_model() {
+	GMenu *main_menu = g_menu_new();
+	GMenu *texts_menu = g_menu_new();
+
+	GtkStringList *string_list = gtk_string_list_new(NULL);
+
+	file_util_add_files_list(string_list, TYPING_TEXTS_DIR, ".txt");
+
+
+
+
+
+
+	for (int i=0; true; i++) {
+		const char *curr_str = gtk_string_list_get_string(string_list, i);
+
+
+		if (!curr_str) {
+			break;
+		}
+
+		GMenuItem *item = g_menu_item_new(curr_str, NULL);
+		GVariant *data = g_variant_new_string(curr_str);
+
+		g_menu_item_set_action_and_target_value(item, "app.select_text", data);
+
+
+		g_menu_append_item(texts_menu, item);
+
+		g_object_unref(item);
+	}
+
+	g_menu_append_submenu(main_menu, "Texts", G_MENU_MODEL(texts_menu));
+
+
+	return main_menu;
+
+}
+
+GCWidget *create_menu_button(Rect rect) {
+	GCWidget *menu_button = malloc(sizeof(GCWidget));
+
+
+	gc_widget_init(
+		menu_button,
+		gtk_menu_button_new(),
+		NULL,
+		0,
+		(GCWidgetDefCommon) {
+			.halign=GTK_ALIGN_FILL,
+			.valign=GTK_ALIGN_FILL,
+			.hexpand=true,
+			.vexpand=true,
+			.tag=0,
+		},
+		(GCWidgetDefUnique) {
+			.rect = rect,
+		}
+	);
+
+
+	GMenu *g_menu = create_side_menu_model();
+
+	gtk_menu_button_set_menu_model(GTK_MENU_BUTTON(menu_button->g_widget), G_MENU_MODEL(g_menu));
+
+	return menu_button;
+
+}
+
+GCContainer *create_side_menu(Rect rect) {
+	Point size_request = {50,50};
+
+	GCContainer *sidebar_container = gc_container_create((GCContainerDef) {
+		.common = {
+			.halign = GTK_ALIGN_END,
+			.valign = GTK_ALIGN_END,
+			.hexpand = false,
+			.vexpand = false,
+			.tag = 0,
+		},
+
+		.unique = {
+			.rect = rect,
+		},
+
+		.spacing = 1
+	});
+
+
+
+	GCWidget *menu_button = create_menu_button((Rect){1,0,1,1});
+
+	gc_container_attach(sidebar_container, menu_button);
+	gc_container_display(sidebar_container);
+
+	//gtk_widget_set_size_request(sidebar_container->gc_widget.g_widget, size_request.x, size_request.y);
+
+	return sidebar_container;
+
+}
+
+
 GCScene* create_test_scene(Slice *layout_slice) {
 
 	Point dimensions = {300,300};
@@ -266,15 +389,10 @@ GCScene* create_test_scene(Slice *layout_slice) {
 
 	//list testing
 
+	GCContainer *sidebar_container = create_side_menu((Rect){1,0,1,1});
 
 
-
-
-
-
-
-
-
+	gc_container_attach(&p_scene->scene_container, &sidebar_container->gc_widget);
 
 
 
@@ -287,6 +405,9 @@ GCScene* create_test_scene(Slice *layout_slice) {
 
 	gc_container_attach(&p_scene->scene_container, &keyboard_section_container->gc_widget);
 
+
+
+	//const char *challenge_text = text_loader_load_text("project_data/texts/bob text 1.txt");
 
 	return p_scene;
 }
