@@ -101,7 +101,7 @@ GCError keyboard_layout_load(KeyboardLayout *layout, char *path) {
 
 		char first_byte = buff[0];		
 
-		p_ichar->size = get_char_size(first_byte);
+		p_ichar->size = util_get_char_size(first_byte);
 	
 
 		//fill char data

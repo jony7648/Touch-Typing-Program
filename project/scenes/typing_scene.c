@@ -1,14 +1,54 @@
 #include "typing_scene.h"
-#include "gc_widgets/include_me.h"
 #include "project/project.h"
 #include "project/text_loader.h"
+#include "core/global_manager.h"
 #include "gdk/gdk.h"
 
-GCTextView *G_ChallengeTextView = NULL;
 
+
+GCTextView *G_ChallengeTextView = NULL;
+GCTime G_test_start_time;
+bool G_test_started;
+
+size_t G_WPM_LABEL_GLOBAL_INDEX;
+size_t G_KEYBOARD_CONTAINER_INDEX;
+
+static void start_test();
+
+static void signal_toggle_onscreen_keyboard(GSimpleAction *action, GVariant *var, gpointer user_data) {
+	GVariant *state = g_action_get_state(G_ACTION(action));
+    gboolean is_active = g_variant_get_boolean(state);
+
+	g_variant_unref(state);
+
+
+	is_active = !is_active;
+	g_simple_action_set_state(G_ACTION(action), g_variant_new_boolean(is_active));
+
+	GCContainer *keyboard_container = global_manager_get(G_KEYBOARD_CONTAINER_INDEX);
+
+	if (keyboard_container) {
+		gtk_widget_set_visible(keyboard_container->gc_widget.g_widget, is_active);
+	}
+
+	printf("ON SCREEN KEYBOARD TOGGLED: %d\n", is_active);
+}
+
+static void _on_attached_to_window(GCEmitData *emit_data) {
+	//setup actions
+	
+	SceneSignalAttachedToWindow *signal = emit_data->sig_data;
+	
+	GSimpleAction *select_text_action = g_simple_action_new_stateful("toggle_onscreen_keyboard", NULL, g_variant_new_boolean(FALSE));
+
+	g_signal_connect(select_text_action, "activate", G_CALLBACK(signal_toggle_onscreen_keyboard), signal->p_win);
+	g_action_map_add_action(G_ACTION_MAP(signal->p_win->g_widget), G_ACTION(select_text_action));
+}
 
 static void _on_text_loader_text_loaded(GCEmitData *emit_data) {
 	TextLoaderSigTextLoaded *signal = emit_data->sig_data;
+
+	G_test_started = false;
 
 
 	if (G_ChallengeTextView) {
@@ -21,9 +61,34 @@ static void _on_text_loader_text_reloaded(GCEmitData *emit_data) {
 
 	//do not need to reset text buffer with this as it is being reset
 	//with the by the input field
-
-
 }
+
+
+static void _on_text_loader_text_finished(GCEmitData *emit_data) {
+	G_test_started = false;	
+
+	TextLoaderSigTestFinished *signal = emit_data->sig_data;
+
+	gctime_time_display_info(&G_test_start_time);
+	gctime_time_display_info(&signal->end_time);
+	float wpm = gctime_get_wpm(&G_test_start_time, &signal->end_time, signal->char_count);
+
+	GCWidget *wpm_label = global_manager_get(G_WPM_LABEL_GLOBAL_INDEX);
+
+	//TEST TO SEE IF THE WIDGET EXIST
+	gc_widget_display_info(wpm_label);
+
+	char wpm_str[20] = "WPM: ";
+	char num_str[100];
+	num_str[0] = '\0';
+
+	cstr_from_float(num_str, wpm, 2);
+
+	strcat(wpm_str, num_str);
+
+	gtk_label_set_text(GTK_LABEL(wpm_label->g_widget), wpm_str);
+}
+
 
 static gboolean action_reset_text_field_text(gpointer ptr) {
 	GCTextField *text_field = (GCTextField*)ptr;
@@ -38,6 +103,11 @@ static void _on_textfield_activate(GEmitData *emit_data) {
 	GCTextField *text_field = (GCTextField*)emit_data->holder;
 
 	const char *text = gtk_editable_get_text(GTK_EDITABLE(text_field->gc_widget.g_widget));
+
+
+	if (!G_test_started) {
+		start_test();
+	}
 
 	StrView view;
 	str_view_init(&view, text);
@@ -55,6 +125,12 @@ static void _on_textfield_activate(GEmitData *emit_data) {
 
 
 }
+
+static void start_test() {
+	gctime_get_current_time(&G_test_start_time);
+	G_test_started = true;
+}
+
 
 static GCContainer *create_keyboard_keys(KeyboardLayout *keyboard_layout, Rect container_rect) {
 	GCContainer *key_container = NULL;
@@ -137,6 +213,8 @@ static GCTextField *create_text_field(Rect rect) {
 		"changed", 
 		_on_textfield_activate
 	);
+
+	text_loader_listen_for(TextLoaderSigIDTestFinished, _on_text_loader_text_finished);
 
 	if (!text_field) {
 		return NULL;
@@ -259,21 +337,51 @@ static GCContainer *create_keyboard_section_container(KeyboardLayout *layout) {
 	gc_container_attach(container, &keyboard_container->gc_widget);
 	gc_container_display(container);
 
+	 GCSizeTOptional optional = global_manager_add(keyboard_container);
+
+	 if (optional.valid) {
+		G_KEYBOARD_CONTAINER_INDEX = optional.value;
+	 }
+	
+
 	return container;
 }
 
 
 GMenu *create_side_menu_model() {
+	GtkBuilder *builder = gtk_builder_new();
+	
+	char file_path_buffer[1000];
+	file_path_buffer[0] = '\0';
+
+	char *cstr_arr[] = {MENU_TEMPLATE_DIR, TEMPLATE_TYPING_SCENE_UI_NAME, NULL};
+
+	cstr_combine(file_path_buffer, sizeof(file_path_buffer), cstr_arr);
+
+	GError *error = NULL;
+
+	gtk_builder_add_from_file(builder, file_path_buffer, &error);
+
+	if (error) {
+        g_printerr("Error loading UI file: %s\n", error->message);
+        g_clear_error(&error);
+        g_object_unref(builder);
+        //g_object_unref(main_menu);
+    }
+
+
+	GMenuModel *template_model = G_MENU_MODEL(gtk_builder_get_object(builder, "right-sidebar-menu"));
+	//GMenu *template_menu = G_MENU(util_get_submenu_from_model(template_model, "right-sidebar"));
+
+
+	
 	GMenu *main_menu = g_menu_new();
+	//GMenu *texts_menu = G_MENU(gtk_builder_get_object(builder, "my_target_section"));
 	GMenu *texts_menu = g_menu_new();
 
 	GtkStringList *string_list = gtk_string_list_new(NULL);
 
 	file_util_add_files_list(string_list, TYPING_TEXTS_DIR, ".txt");
-
-
-
-
 
 
 	for (int i=0; true; i++) {
@@ -295,8 +403,19 @@ GMenu *create_side_menu_model() {
 		g_object_unref(item);
 	}
 
+
+
+	/*
+	if (template_menu) {
+		//g_menu_append_section(main_menu, "", G_MENU_MODEL(template_menu));
+	}
+	*/
+
+	g_menu_append_section(main_menu, "Options", template_model);
 	g_menu_append_submenu(main_menu, "Texts", G_MENU_MODEL(texts_menu));
 
+
+	g_object_unref(builder);
 
 	return main_menu;
 
@@ -364,50 +483,122 @@ GCContainer *create_side_menu(Rect rect) {
 
 }
 
+GCContainer *create_notification_container(Rect rect) {
+	GCContainer *container = gc_container_create((GCContainerDef){
+		.common = {
+			.halign = GTK_ALIGN_FILL,
+			.valign = GTK_ALIGN_FILL,
+			.hexpand = true,
+			.vexpand = true,
+			.tag = 0,
+		},
 
-GCScene* create_test_scene(Slice *layout_slice) {
+		.unique = {
+			rect=rect
+		},
 
-	Point dimensions = {300,300};
-	GCScene *p_scene = gc_scene_create(1, dimensions);
-	GCTextField *p_text_field = NULL;
+		.spacing = 1,
+	});
+
+
+	GCWidget *wpm_label = gc_widget_create(&(GCWidgetDefGeneric) {
+		.gc_type = GCTypeLabel,
+		.g_widget = gtk_label_new("WPM: "),
+		.common = {
+			.halign = GTK_ALIGN_START,
+			.valign = GTK_ALIGN_FILL,
+			.hexpand = true,
+			.vexpand = true,
+			.tag = 0,
+		},
+		.unique = {
+			.rect = rect
+		},
+	});
+
+	gc_container_attach(container, wpm_label);
+	gc_container_display(container);
+
+	GCSizeTOptional optional = global_manager_add(wpm_label);
+
+
+
+	if (optional.valid) {
+		G_WPM_LABEL_GLOBAL_INDEX = optional.value;
+	}
+
+	return container;
+}
+
+GCContainer *create_main_challenge_area(Rect area_rect, Slice *layout_slice) {
+	enum Heights {
+		TextWinHeight,
+	};
+
+	KeyboardLayout *p_keyboard_layout = NULL;
 	GCScrollWindow *challenge_scroll_window = NULL;	
+	GCTextField *p_text_field = NULL;
+	GCContainer *keyboard_section_container = NULL;
+	GCContainer *notification_container = NULL;
+
+	GCContainer *main_area = gc_container_create((GCContainerDef) {
+		.common = {
+			.halign = GTK_ALIGN_CENTER,
+			.valign = GTK_ALIGN_CENTER,
+			.hexpand = true,
+			.vexpand = true,
+			.tag = 0,
+		},
+
+		.unique = {
+			.rect = area_rect,
+		},
+		.spacing = 1,
+	});
 
 
+	p_keyboard_layout = &layout_slice->p_mem[0];
 
-	KeyboardLayout *p_keyboard_layout = &layout_slice->p_mem[0];
-
-
-
-	GCContainer *keyboard_section_container = create_keyboard_section_container(p_keyboard_layout);
 	challenge_scroll_window = create_challenge_scroll_window((Rect){0,0,1,1}, (Point) {300,50});
 	p_text_field = create_text_field((Rect){0,1,1,1});
 
+	notification_container = create_notification_container((Rect) {0,-1,1,1});
+	keyboard_section_container = create_keyboard_section_container(p_keyboard_layout);
 
 
+	gc_container_attach(main_area, &challenge_scroll_window->gc_widget);
+
+	gc_container_attach(main_area, &p_text_field->gc_widget);
+
+	gc_container_attach(main_area, &keyboard_section_container->gc_widget);
+
+	gc_container_attach(main_area, &notification_container->gc_widget);
+
+	gc_container_display(main_area);
 
 
-
-	//list testing
-
-	GCContainer *sidebar_container = create_side_menu((Rect){1,0,1,1});
+	return main_area;
+}
 
 
+GCScene* create_test_scene(Slice *layout_slice) {
+	enum Heights {
+		SidebarHeight,
+		ChallengeHeight,
+	};
+
+	Point dimensions = {300,300};
+	GCScene *p_scene = gc_scene_create(1, dimensions);
+
+	GCContainer *challenge_area = create_main_challenge_area((Rect){0,ChallengeHeight,1,1}, layout_slice);
+
+	GCContainer *sidebar_container = create_side_menu((Rect){0,SidebarHeight,1,1});
+
+
+	gc_container_attach(&p_scene->scene_container, &challenge_area->gc_widget);
 	gc_container_attach(&p_scene->scene_container, &sidebar_container->gc_widget);
 
-
-
-
-
-	gc_container_attach(&p_scene->scene_container, &p_text_field->gc_widget);
-	if (challenge_scroll_window) {
-		gc_container_attach(&p_scene->scene_container, &challenge_scroll_window->gc_widget);
-	}
-
-	gc_container_attach(&p_scene->scene_container, &keyboard_section_container->gc_widget);
-
-
-
-	//const char *challenge_text = text_loader_load_text("project_data/texts/bob text 1.txt");
+	listener_listen(&p_scene->listener, SceneSignalIDAttachedToWindow, _on_attached_to_window);
 
 	return p_scene;
 }

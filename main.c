@@ -3,10 +3,12 @@
 #include "core/time_componet.h"
 #include "core/keyboard.h"
 #include "core/str_view.h"
+#include "core/string.h"
 
 #include "core/types.h"
 #include "core/space.h"
 #include "core/scene.h"
+#include "core/timer.h"
 
 #include "core/util.h"
 #include "core/file_util.h"
@@ -49,35 +51,10 @@ static void _on_text_selected(GSimpleAction *action, GVariant *var, gpointer use
 
 	text_loader_load_text(text_path);
 
+	free(text_path);
+
 }
 
-static GMenuModel *get_submenu_from_model(GMenuModel *model, char *target_menu_name) {
-	const char *label = NULL;
-
-	int count = g_menu_model_get_n_items(model);
-	int item_index = 0;
-
-	StrView view;
-
-	 for (int i=0; i<count; i++) {
-		g_menu_model_get_item_attribute(model,i,G_MENU_ATTRIBUTE_LABEL,"s", &label);
-
-		str_view_init(&view, label);
-
-		int found = str_view_cmp(&view, target_menu_name);
-
-		if (found == 0) {
-			item_index = i;
-		}
-
-
-	 }
-
-	GMenuModel *sub_model = g_menu_model_get_item_link(model, 0, G_MENU_LINK_SUBMENU);
-	
-
-	return sub_model;
-}
 
 
 
@@ -110,11 +87,6 @@ static void load_application_menu(GCApp *gc_app, GCWin *gc_win) {
 
 	int str_index = 0;
 	char *curr_str = NULL;
-
-
-	
-
-
 
 	GMenuItem *item = g_menu_item_new(curr_str, NULL);
 	GVariant *data = g_variant_new_string("nug");
@@ -229,42 +201,7 @@ static void signal_app_run(GtkApplication *g_app, gpointer p_signal) {
 	load_application_actions(p_app);
 }
 
-unsigned char rotate_byte_left(unsigned char b, unsigned char c) {
-	c %= 8;
 
-	unsigned char res = b;
-	for (int i = 0; i<c; i++) {
-		res = (res << 1) | (res >> 7); 
-	}
-
-	return res;
-}
-unsigned char rotate_byte_right(unsigned char b, unsigned char c) {
-	c %= 8;
-
-	unsigned char res = b;
-	for (int i = 0; i<c; i++) {
-		res = (res >> 1) | (res << 7); 
-	}
-
-	return res;
-}
-
-void display_bytes(unsigned int val) {
-	int iter = 0;
-
-	for (int i=0; i<8; i++) {
-		int bit = (val & 128 ) ? 1 : 0;
-	 
-		printf("%d", bit);
-
-		val = rotate_byte_left(val, 1);
-
-	}
-
-	puts("");
-
-}
 
 GCError load_keyboard_layouts(char *dir_path, Slice *layout_slice) {
 	struct dirent *entry;
@@ -314,13 +251,16 @@ GCError load_keyboard_layouts(char *dir_path, Slice *layout_slice) {
 }
 
 
+void timeout_func(TimerSignalTimeout*) {
+	puts("Timeout func executed");
+}
 
 int main(int argc, char **argv) {
-	GCTime time;	
+	GCDate date;	
 
-	gctime_set_date_from_sys_clock(&time);
+	gctime_set_date_from_sys_clock(&date);
 
-	return 0;
+
 	setlocale(LC_ALL, ".ut8");
 
 	GCError err = 0;
@@ -330,9 +270,6 @@ int main(int argc, char **argv) {
 		.name = "Test App", 
 		.app_id = "org.jony.test",
 	};
-
-
-
 
 	SliceInit(&layout_slice, sizeof(KeyboardLayout), 5);
 	err = load_keyboard_layouts(KEYBOARD_LAYOUT_DIR, &layout_slice);
@@ -345,7 +282,7 @@ int main(int argc, char **argv) {
 	LaunchData launch_data = {
 		.p_app = &app,
 		.p_layout_slice = &layout_slice,
-		.p_time = &time,
+		.p_date = &date,
 	};
 
 
@@ -358,6 +295,4 @@ int main(int argc, char **argv) {
 	SliceFree(&layout_slice);
 
 	return 0;
-
-
 }

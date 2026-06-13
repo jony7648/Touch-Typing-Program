@@ -8,6 +8,7 @@ typedef enum {
 	ErrorSceneIndexNotFound,
 	ErrorFileAccessFailed,
 	ErrorInadequateBufferSize,
+	ErrorNoThreadAvailable,
 	ErrorFailedAlloc,
 
 	GCErrorTypeCount,

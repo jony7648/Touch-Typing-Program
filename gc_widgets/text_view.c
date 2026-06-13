@@ -41,7 +41,7 @@ GCTextView *gc_text_view_create(GCTextViewDef def) {
 	return p;
 }
 
-void gc_text_view_set_text(GCTextView *text_view, char *text) {
+void gc_text_view_set_text(GCTextView *text_view, const char *text) {
 	GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_view->gc_widget.g_widget));	
 	gtk_text_buffer_set_text(text_buffer, text, -1);
 }

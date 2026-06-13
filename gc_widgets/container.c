@@ -40,6 +40,10 @@ GCContainer *gc_container_create(GCContainerDef def) {
 }
 
 GCError gc_container_attach(GCContainer *p, GCWidget *widget) {
+	if (!widget || !p) {
+		return ErrorNull;
+	}
+
 	GCWidgetSliceAppend(&p->widget_slice, widget);
 	return ErrorClear;
 }

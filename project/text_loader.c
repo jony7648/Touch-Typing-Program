@@ -4,7 +4,8 @@
 #define TEXT_BUFF_SIZE 10000
 char G_type_test_buffer[TEXT_BUFF_SIZE];
 char *G_type_test_use_ptr = G_type_test_buffer;
-size_t G_text_buffer_pos = 0;
+size_t G_text_buffer_pos;
+size_t G_text_len;
 
 
 Listener G_listener;
@@ -16,6 +17,8 @@ const char ADVANCE_CHAR = ' ';
 void text_loader_init(GCApp*) {
 	listener_init(&G_listener, NULL, GCTypeEmpty, TextLoaderSignalCount);	
 }
+
+
 
 size_t buffer_append(char *store_buff, char *copy_buff, size_t buffer_start) {
 	size_t i = 0;
@@ -39,7 +42,7 @@ size_t buffer_append(char *store_buff, char *copy_buff, size_t buffer_start) {
 
 
 	//printf("%s", store_buff);
-	store_buff[store_index] = '\0';
+	store_buff[store_index + 1] = '\0';
 	return store_index;
 }
 
@@ -52,7 +55,7 @@ const char *text_loader_load_text(char *file_path) {
 
 	char *ret_ptr = G_type_test_buffer;
 
-	printf("%s\n", file_path);
+	printf("File Path: %s\n", file_path);
 	if (!fptr) {
 		fclose(fptr);
 		return NULL;		
@@ -131,6 +134,17 @@ bool text_loader_check_for_matching_word(const char *word) {
 	return false;
 }
 
+
+void test_finished(size_t char_count) {
+	TextLoaderSigTestFinished signal;
+
+	signal.char_count = char_count;
+
+	gctime_get_current_time(&signal.end_time);
+
+	listener_emit(&G_listener, TextLoaderSigIDTestFinished, &signal);
+}
+
 char *text_loader_advance_word() {
 	size_t i = 0;
 
@@ -144,8 +158,7 @@ char *text_loader_advance_word() {
 	//and jump to the end of the function
 	for (i=G_text_buffer_pos; G_type_test_use_ptr[i] != ' '; i++) {
 		if (G_type_test_use_ptr[i] == '\0') {
-			puts("You finished the text!!");
-			text_loader_restart_text();
+			test_finished(i);
 			return G_type_test_use_ptr;
 		}
 	}
@@ -155,7 +168,7 @@ char *text_loader_advance_word() {
 	//extra spaces at the end
 	for (i=i; G_type_test_use_ptr[i] == ' '; i++) {
 		if (G_type_test_use_ptr[i] == '\0') {
-			puts("You finished the text!!");
+			test_finished(i);
 			break;
 		}
 	}
@@ -168,6 +181,9 @@ end_func:
 
 	return &G_type_test_use_ptr[i];
 }
+
+
+
 
 
 void text_loader_listen_for(int id, GCEmitFuncPtr func) {

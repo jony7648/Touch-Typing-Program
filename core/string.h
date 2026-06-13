@@ -1,4 +1,3 @@
-
 #pragma once
 #include "arena.h"
 #include <stdio.h>
@@ -19,4 +18,3 @@ void StringDisplayInfo(String* str);
 void StringToUpper(String* str);
 void StringToLower(String* str);
 const char* StringToCstr(Arena* p_arena, String* str);
-

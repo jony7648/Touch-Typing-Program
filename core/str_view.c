@@ -30,10 +30,11 @@ size_t str_view_split(StrView *str, Arena *arena, char split_char, bool remove_e
 
 	for (size_t i=0; i<str->len; i++) {
 		char curr_char = str->ptr[i];		
-		bool should_split = curr_char == split_char || i == str->len - 1;
+		bool hit_end_of_text = i == str->len - 1;
+		bool should_split = curr_char == split_char || i == str->len;
 
-		if (should_split) {
-			size_t view_len = i - str_start;
+		if (should_split || hit_end_of_text) {
+			size_t view_len = i - str_start + hit_end_of_text;
 
 			if (remove_empty && view_len == 0) {
 				continue;

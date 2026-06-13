@@ -2,7 +2,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 cmake_minimum_required(VERSION 3.21)
 project(App CXX)
 
-set(CMAKE_C_STANDARD 23)
+
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK4 REQUIRED IMPORTED_TARGET gtk4)
@@ -34,11 +34,13 @@ set(CORE_C
 	"${CORE_DIR}/util.c"
 	"${CORE_DIR}/file_util.c"
 	"${CORE_DIR}/str_view.c"
+	"${CORE_DIR}/cstr.c"
 	"${CORE_DIR}/arena.c" 
 	"${CORE_DIR}/slice.c"
 	"${CORE_DIR}/time_componet.c"
 	"${CORE_DIR}/keyboard.c" 
 	"${CORE_DIR}/listener.c"
+	"${CORE_DIR}/timer.c"
 	"${CORE_DIR}/app.c" 
 	"${CORE_DIR}/window.c"
 	"${CORE_DIR}/scene.c"
@@ -65,7 +67,16 @@ add_executable(
 	${PROJECT_SRC}
 )
 
+set_target_properties(app PROPERTIES
+    C_STANDARD 23
+    C_STANDARD_REQUIRED ON
+    C_EXTENSIONS OFF
+)
+
 project(app LANGUAGES C)
 target_compile_options(app PRIVATE ${GTK4_CFLAGS})
 target_link_libraries(app PkgConfig::GTK4)
+
+
+
 

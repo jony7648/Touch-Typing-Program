@@ -18,7 +18,8 @@ void global_manager_init(GCApp*) {
 	G_object_list.p_mem = malloc(G_object_list.size * sizeof(void*));
 }
 
-GCSizeTOptional global_mananger_add(void *object) {
+
+GCSizeTOptional global_manager_add(void *object) {
 	size_t new_count = G_object_list.count + 1;
 
 	if (new_count > G_object_list.size) {
@@ -39,4 +40,14 @@ GCSizeTOptional global_mananger_add(void *object) {
 		.value = G_object_list.count-1,
 		.valid = true,
 	};
+}
+
+void *global_manager_get(size_t index) {
+	void *obj = NULL;
+
+	if (index < G_object_list.size) {
+		obj = G_object_list.p_mem[index];
+	}
+
+	return obj;
 }

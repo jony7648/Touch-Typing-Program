@@ -53,6 +53,12 @@ void gc_win_set_scene(GCWin *p_win, GCScene *scene) {
 	);
 
 	p_win->curr_scene = scene;
+
+	SceneSignalAttachedToWindow signal = {
+		p_win,
+	};
+
+	listener_emit(&scene->listener, SceneSignalIDAttachedToWindow, &signal);
 }
 
 void gc_win_display(GCWin* p_win) {

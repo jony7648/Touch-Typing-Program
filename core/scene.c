@@ -9,6 +9,7 @@ void gc_scene_display_info(GCScene* scene) {
 
 GCScene *gc_scene_create(unsigned short scene_id, Point dimensions) {
 	GCScene* p_scene = malloc(sizeof(GCScene));
+	listener_init(&p_scene->listener, p_scene, GCTypeScene, SceneSignalCount);
 
 	p_scene->scene_id = scene_id;
 	p_scene->dimensions.x = 7;
@@ -31,11 +32,8 @@ GCScene *gc_scene_create(unsigned short scene_id, Point dimensions) {
 
 	};
 
-
-
-
-
 	gc_container_init(&p_scene->scene_container, &container_def);
+	
 
 
 

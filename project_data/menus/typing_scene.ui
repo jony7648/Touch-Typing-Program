@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+	<menu id="right-sidebar">
+		<submenu id="right-sidebar-menu">
+			<section id="right-sidebar-section">
+				<item>
+					<attribute name="label">OnScreen Keyboard</attribute>
+					<attribute name="action">win.toggle_onscreen_keyboard</attribute>
+				</item>
+
+				<item>
+					<attribute name="label">Typing Stats</attribute>
+				</item>
+
+				<item>
+					<attribute name=<"label">Dark Theme</attribute>
+				</item>
+			</section>
+		</submenu>
+	</menu>
+</interface>
+

@@ -26,6 +26,12 @@ typedef struct {
 	Rect rect;
 } GCWidgetDefUnique;
 
+typedef struct {
+	GCWidgetDefCommon common;
+	GCWidgetDefUnique unique;
+	GtkWidget *g_widget;
+	GCType gc_type;
+} GCWidgetDefGeneric;
 
 //ensure that you include this member as the first when creating a gc widget,
 //as it allows for the casting of a GtkWidget* to any GCWidget pointer
@@ -44,5 +50,6 @@ struct GCWidget {
 
 void gc_widget_display_info(GCWidget *widget);
 void gc_widget_init(GCWidget* widget, GtkWidget* gtk_widget, void *(*destructor_ptr)(GCWidget*), GCType type, GCWidgetDefCommon com, GCWidgetDefUnique unique);
+GCWidget *gc_widget_create(GCWidgetDefGeneric* full_def);
 GCError gc_widget_free(GCWidget *gc_widget);
 

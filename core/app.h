@@ -1,7 +1,6 @@
 #pragma once
 #include "space.h"
 #include "window.h"
-#include "core/scene.h"
 #include <gtk/gtk.h>
 
 typedef struct {

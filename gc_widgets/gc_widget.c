@@ -23,6 +23,16 @@ void gc_widget_init(GCWidget* widget, GtkWidget* gtk_widget, void *(*destructor_
 	gtk_widget_set_vexpand(gtk_widget, com.vexpand);
 }
 
+GCWidget *gc_widget_create(GCWidgetDefGeneric *full_def) {
+	GCWidget *p = malloc(sizeof(GCWidget));
+
+	gc_widget_init(p, full_def->g_widget, NULL, full_def->gc_type, full_def->common, full_def->unique);
+
+	return p;
+}
+
+
+
 GCError gc_widget_free(GCWidget *p) {
 	//This function is responsible for freeing the GCWidget
 	//This will also free if the widget if it does not have a destructor

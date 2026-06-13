@@ -1,11 +1,11 @@
 #pragma once
 #include "space.h"
+#include "core/scene.h"
 
 
 #include <gtk/gtk.h>
-#include "core/scene.h"
 
-typedef struct {
+typedef struct GCWin{
 	Point dimensions;
 	char *title;	
 	GCScene *curr_scene;

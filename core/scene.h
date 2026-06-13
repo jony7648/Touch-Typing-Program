@@ -2,14 +2,25 @@
 #include "space.h"
 #include "slice.h"
 
-
 #include "gc_widgets/container.h"
 
+typedef struct GCWin GCWin;
+
+enum Signals {
+	SceneSignalIDAttachedToWindow,
+
+	SceneSignalCount,
+};
+
+typedef struct {
+	GCWin *p_win;
+} SceneSignalAttachedToWindow;
 
 typedef struct {
 	GCContainer scene_container;	
-	unsigned short scene_id;
+	Listener listener;
 	Point dimensions;
+	unsigned short scene_id;
 } GCScene;
 
 GCScene* gc_scene_create(unsigned short scene_id, Point dimensions);

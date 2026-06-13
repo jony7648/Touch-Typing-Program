@@ -4,4 +4,5 @@
 
 #include <stdio.h>
 void global_manager_init(GCApp*);
-GCSizeTOptional global_mananger_add(void *object);
+void *global_manager_get(size_t index);
+GCSizeTOptional global_manager_add(void *object);

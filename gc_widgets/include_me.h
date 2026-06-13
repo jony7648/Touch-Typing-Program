@@ -8,8 +8,7 @@
 #include "scroll_window.h"
 #include "gc_list.h"
 
-
-
 #include "core/file_util.h"
 #include "core/util.h"
+#include "core/cstr.h"
 

@@ -1,6 +1,10 @@
 #include "arena.h"
 #include "string.h"
 
+#include <stdint.h>
+#include <math.h>
+#include <string.h>
+
 #define LOWER_LETTER_START 97
 #define UPPER_LETTER_START 65
 #define LETTER_COUNT 26
@@ -11,7 +15,7 @@ String* StringCreate(Arena* arena, size_t max_len) {
 
 	String* str;
 
-	str = ArenaPush(arena, alloc_ammount);	
+	str = arena_push(arena, alloc_ammount);	
 
 	if (!str) {
 		printf("Fail no mem left\n");
@@ -116,7 +120,7 @@ void StringToLower(String* str) {
 }
 
 const char* StringToCstr(Arena* p_arena, String* str) {
-	char* ret_ptr = ArenaPush(p_arena, sizeof(char) * str->len + 1);
+	char* ret_ptr = arena_push(p_arena, sizeof(char) * str->len + 1);
 
 	if (!ret_ptr) {
 		return NULL;
@@ -134,3 +138,5 @@ const char* StringToCstr(Arena* p_arena, String* str) {
 
 	return ret_ptr;
 }
+
+
